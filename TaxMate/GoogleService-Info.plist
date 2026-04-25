@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>API_KEY</key>
+	<string>AIzaSyAkDtg9_dwxZVvi8Vp9LGsykeSFcw0_-xM</string>
+	<key>GCM_SENDER_ID</key>
+	<string>115967681592</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>ABCD.TaxMate</string>
+	<key>PROJECT_ID</key>
+	<string>taxmate-5300f</string>
+	<key>STORAGE_BUCKET</key>
+	<string>taxmate-5300f.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:115967681592:ios:c5f7e2bee5a97d7ae072cd</string>
+</dict>
+</plist>
