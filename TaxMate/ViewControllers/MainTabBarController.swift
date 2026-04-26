@@ -16,9 +16,24 @@ final class MainTabBarController: UITabBarController {
     }
 
     private func setupAppearance() {
-        tabBar.tintColor = UIColor.systemGreen
+        tabBar.tintColor = AppColors.primary
         tabBar.unselectedItemTintColor = UIColor.systemGray
-        tabBar.backgroundColor = .white
+        
+        let appearance = UITabBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = UIColor.systemBackground
+        
+        appearance.stackedLayoutAppearance.selected.iconColor = AppColors.primary
+        appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
+            .foregroundColor: AppColors.primary
+        ]
+        appearance.stackedLayoutAppearance.normal.iconColor = UIColor.systemGray
+        appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
+            .foregroundColor: UIColor.systemGray
+        ]
+        
+        tabBar.standardAppearance = appearance
+        tabBar.scrollEdgeAppearance = appearance
     }
 
     private func setupTabs() {

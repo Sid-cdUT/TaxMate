@@ -294,11 +294,19 @@ final class RegisterViewController: UIViewController {
             return
         }
 
-        guard password.count >= 6 else {
-            showError("Password must be at least 6 characters.")
+        guard password.count >= 8 else {
+            showError("Password must be at least 8 characters.")
             return
         }
 
+        let hasUppercase = password.contains(where: { $0.isUppercase })
+        let hasNumber = password.contains(where: { $0.isNumber })
+        let hasSpecial = password.contains(where: { "!@#$%^&*".contains($0) })
+
+        guard hasUppercase && hasNumber && hasSpecial else {
+            showError("Password must contain at least one uppercase letter, one number, and one special character (!@#$%^&*).")
+            return
+        }
         setLoading(true)
 
         Auth.auth().createUser(withEmail: email, password: password) { [weak self] result, error in
