@@ -226,7 +226,22 @@ final class LoginViewController: UIViewController {
             DispatchQueue.main.async {
                 self?.setLoading(false)
                 if let error = error {
-                    self?.showError(error.localizedDescription)
+                    if let errCode = AuthErrorCode(rawValue: error._code) {
+                        switch errCode {
+                        case .wrongPassword, .invalidCredential:
+                            self?.showError("Incorrect email or password. Please try again.")
+                        case .invalidEmail:
+                            self?.showError("Please enter a valid email address.")
+                        case .userNotFound:
+                            self?.showError("No account found with this email. Please create an account.")
+                        case .userDisabled:
+                            self?.showError("This account has been disabled. Please contact support.")
+                        case .tooManyRequests:
+                            self?.showError("Too many attempts. Please try again later.")
+                        default:
+                            self?.showError("Login failed. Please check your credentials and try again.")
+                        }
+                    }
                 } else {
                     self?.navigateToMain()
                 }
