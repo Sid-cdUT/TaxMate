@@ -66,7 +66,8 @@ final class SettingsViewController: UIViewController {
     
     // MARK: - Tax Year Picker
     private func showTaxYearPicker() {
-        let years = ["2023", "2024", "2025", "2026"]
+        let currentYear = Calendar.current.component(.year, from: Date())
+        let years = ["\(currentYear - 2)", "\(currentYear - 1)", "\(currentYear)"]
         let alert = UIAlertController(title: "Tax Year", message: nil, preferredStyle: .actionSheet)
         for year in years {
             alert.addAction(UIAlertAction(title: year, style: .default) { _ in
@@ -153,7 +154,8 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
             
         case 2: // TAX
             if indexPath.row == 0 {
-                let year = UserDefaults.standard.string(forKey: "taxYear") ?? "2025"
+                let currentYear = Calendar.current.component(.year, from: Date())
+                let year = UserDefaults.standard.string(forKey: "taxYear") ?? "\(currentYear)"
                 config.text = "Tax Year"
                 config.secondaryText = year
                 cell.accessoryType = .disclosureIndicator
