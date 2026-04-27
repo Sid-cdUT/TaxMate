@@ -204,14 +204,12 @@ final class HomeViewController: UIViewController {
         view.addSubview(floatingButton)
         
         NSLayoutConstraint.activate([
-            // Greeting
             greetingLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
             greetingLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             
             nameLabel.topAnchor.constraint(equalTo: greetingLabel.bottomAnchor, constant: 2),
             nameLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             
-            // Summary Card
             summaryCard.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 16),
             summaryCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             summaryCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
@@ -230,7 +228,6 @@ final class HomeViewController: UIViewController {
             lastLoginLabel.leadingAnchor.constraint(equalTo: summaryCard.leadingAnchor, constant: 24),
             lastLoginLabel.bottomAnchor.constraint(equalTo: summaryCard.bottomAnchor, constant: -24),
             
-            // Quick Actions
             addExpenseButton.topAnchor.constraint(equalTo: summaryCard.bottomAnchor, constant: 16),
             addExpenseButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             addExpenseButton.heightAnchor.constraint(equalToConstant: 44),
@@ -241,7 +238,6 @@ final class HomeViewController: UIViewController {
             taxSummaryButton.heightAnchor.constraint(equalToConstant: 44),
             taxSummaryButton.widthAnchor.constraint(equalTo: addExpenseButton.widthAnchor),
             
-            // Recent
             recentLabel.topAnchor.constraint(equalTo: addExpenseButton.bottomAnchor, constant: 24),
             recentLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             
@@ -254,7 +250,6 @@ final class HomeViewController: UIViewController {
             emptyStateLabel.centerXAnchor.constraint(equalTo: tableView.centerXAnchor),
             emptyStateLabel.centerYAnchor.constraint(equalTo: tableView.centerYAnchor),
             
-            // Floating Button
             floatingButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
             floatingButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -24),
             floatingButton.widthAnchor.constraint(equalToConstant: 60),
@@ -283,7 +278,11 @@ final class HomeViewController: UIViewController {
     }
     
     @objc private func showNotifications() {
-        let alert = UIAlertController(title: "Notifications", message: "No new notifications", preferredStyle: .alert)
+        let alert = UIAlertController(
+            title: "Notifications",
+            message: "No new notifications",
+            preferredStyle: .alert
+        )
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
     }
@@ -292,7 +291,6 @@ final class HomeViewController: UIViewController {
     private func loadData() {
         guard let userID = Auth.auth().currentUser?.uid else { return }
         
-        // Load greeting
         let hour = Calendar.current.component(.hour, from: Date())
         let greeting: String
         switch hour {
@@ -302,17 +300,14 @@ final class HomeViewController: UIViewController {
         }
         greetingLabel.text = greeting
         
-        // Load last login
         let lastLogin = UserDefaults.standard.string(forKey: "lastLogin") ?? "First time!"
         lastLoginLabel.text = "Last login: \(lastLogin)"
         
-        // Save current login time
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
         UserDefaults.standard.set(formatter.string(from: Date()), forKey: "lastLogin")
         
-        // Load user name from Firestore
         Firestore.firestore().collection("users").document(userID).getDocument { [weak self] snapshot, _ in
             DispatchQueue.main.async {
                 let name = snapshot?.data()?["fullName"] as? String ?? "there"
@@ -321,12 +316,10 @@ final class HomeViewController: UIViewController {
             }
         }
         
-        // Load expenses from Core Data
         expenses = CoreDataManager.shared.fetchExpenses(userID: userID)
         let total = CoreDataManager.shared.totalAmount(for: expenses)
         let deductible = expenses.filter { $0.isTaxDeductible }.reduce(0) { $0 + $1.amount }
         
-        // Format currency
         let currency = UserDefaults.standard.string(forKey: "defaultCurrency") ?? "USD"
         let formatter2 = NumberFormatter()
         formatter2.numberStyle = .currency
@@ -335,7 +328,6 @@ final class HomeViewController: UIViewController {
         totalExpensesLabel.text = formatter2.string(from: NSNumber(value: total)) ?? "$0.00"
         deductibleLabel.text = "\(formatter2.string(from: NSNumber(value: deductible)) ?? "$0.00") tax-deductible"
         
-        // Update table
         emptyStateLabel.isHidden = !expenses.isEmpty
         tableView.reloadData()
     }
@@ -354,21 +346,21 @@ extension HomeViewController: UITableViewDataSource, UITableViewDelegate {
         
         var config = cell.defaultContentConfiguration()
         config.text = expense.title
-        config.secondaryText = "\(expense.formattedDate) • \(expense.category ?? "")"
+        config.secondaryText = expense.formattedDate
         config.textProperties.font = UIFont.systemFont(ofSize: 15, weight: .semibold)
+        config.textProperties.numberOfLines = 1
         config.secondaryTextProperties.font = UIFont.systemFont(ofSize: 13)
         config.secondaryTextProperties.color = .secondaryLabel
         
         cell.contentConfiguration = config
+        cell.backgroundColor = .clear
         
-        // Amount label
         let amountLabel = UILabel()
         amountLabel.text = expense.formattedAmount
         amountLabel.font = UIFont.monospacedDigitSystemFont(ofSize: 15, weight: .semibold)
         amountLabel.textColor = AppColors.primary
         amountLabel.sizeToFit()
         cell.accessoryView = amountLabel
-        cell.backgroundColor = .clear
         
         return cell
     }
