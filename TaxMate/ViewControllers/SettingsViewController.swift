@@ -202,6 +202,10 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
             if indexPath.row == 0 { showCurrencyPicker() }
         case 2:
             if indexPath.row == 0 { showTaxYearPicker() }
+        case 3:
+            // Navigate to Reminders screen
+            let vc = RemindersViewController()
+            navigationController?.pushViewController(vc, animated: true)
         default: break
         }
     }

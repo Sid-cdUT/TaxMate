@@ -149,6 +149,7 @@ final class HomeViewController: UIViewController {
     // MARK: - Navigation Bar
     private func setupNavigationBar() {
         navigationItem.title = "TaxMate"
+        
         let alertButton = UIBarButtonItem(
             image: UIImage(systemName: "bell"),
             style: .plain,
@@ -156,7 +157,16 @@ final class HomeViewController: UIViewController {
             action: #selector(showNotifications)
         )
         alertButton.tintColor = AppColors.primary
-        navigationItem.rightBarButtonItem = alertButton
+        
+        let summaryButton = UIBarButtonItem(
+            image: UIImage(systemName: "calendar"),
+            style: .plain,
+            target: self,
+            action: #selector(showMonthlySummary)
+        )
+        summaryButton.tintColor = AppColors.primary
+        
+        navigationItem.rightBarButtonItems = [alertButton, summaryButton]
     }
     
     // MARK: - Layout
@@ -285,6 +295,11 @@ final class HomeViewController: UIViewController {
         )
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
+    }
+    
+    @objc private func showMonthlySummary() {
+        let vc = MonthlySummaryViewController()
+        navigationController?.pushViewController(vc, animated: true)
     }
     
     // MARK: - Load Data

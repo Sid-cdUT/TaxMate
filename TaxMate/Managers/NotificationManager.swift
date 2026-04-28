@@ -114,4 +114,11 @@ final class NotificationManager {
     func removeCustomReminder(id: String) {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
     }
+    
+    // MARK: - Fetch Pending
+    func fetchPendingNotifications(completion: @escaping ([UNNotificationRequest]) -> Void) {
+        UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
+            DispatchQueue.main.async { completion(requests) }
+        }
+    }
 }
