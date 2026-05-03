@@ -311,6 +311,8 @@ final class AddExpenseViewController: UIViewController {
             showAlert(title: "Invalid Amount", message: "Please enter a valid amount.")
             return
         }
+        
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
 
         let categories = ["Travel", "Meals", "Supplies", "Software", "Other"]
         let category = categories[categoryControl.selectedSegmentIndex]

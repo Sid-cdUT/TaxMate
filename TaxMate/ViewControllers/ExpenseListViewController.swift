@@ -15,15 +15,10 @@ final class ExpenseListViewController: UIViewController {
     private var filteredExpenses: [Expense] = []
     private var activeFilter: String = "All"
 
-    // MARK: - UI Components
-    private let searchBar: UISearchBar = {
-        let sb = UISearchBar()
-        sb.placeholder = "Search expenses..."
-        sb.searchBarStyle = .minimal
-        sb.translatesAutoresizingMaskIntoConstraints = false
-        return sb
-    }()
+    private var searchController: UISearchController!
+    private var isSearching = false
 
+    // MARK: - UI Components
     private let filterControl: UISegmentedControl = {
         let sc = UISegmentedControl(items: ["All", "Travel", "Meals", "Supplies", "Software", "Other"])
         sc.selectedSegmentIndex = 0
@@ -79,7 +74,9 @@ final class ExpenseListViewController: UIViewController {
         super.viewDidLoad()
         title = "Expenses"
         view.backgroundColor = AppColors.background
+
         setupNavigationBar()
+        setupSearchController()
         setupLayout()
         setupActions()
     }
@@ -87,6 +84,20 @@ final class ExpenseListViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         loadExpenses()
+    }
+
+    // MARK: - Search Controller
+    private func setupSearchController() {
+        definesPresentationContext = true
+
+        searchController = UISearchController(searchResultsController: nil)
+        searchController.searchResultsUpdater = self
+        searchController.searchBar.delegate = self
+        searchController.obscuresBackgroundDuringPresentation = false
+        searchController.searchBar.placeholder = "Search expenses..."
+
+        navigationItem.searchController = searchController
+        navigationItem.hidesSearchBarWhenScrolling = true
     }
 
     // MARK: - Nav Bar
@@ -103,17 +114,12 @@ final class ExpenseListViewController: UIViewController {
 
     // MARK: - Layout
     private func setupLayout() {
-        view.addSubview(searchBar)
         view.addSubview(filterControl)
         view.addSubview(tableView)
         view.addSubview(emptyStateView)
 
         NSLayoutConstraint.activate([
-            searchBar.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            searchBar.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 8),
-            searchBar.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -8),
-
-            filterControl.topAnchor.constraint(equalTo: searchBar.bottomAnchor, constant: 4),
+            filterControl.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 4),
             filterControl.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             filterControl.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
 
@@ -130,7 +136,6 @@ final class ExpenseListViewController: UIViewController {
 
         tableView.delegate = self
         tableView.dataSource = self
-        searchBar.delegate = self
     }
 
     // MARK: - Actions
@@ -159,14 +164,23 @@ final class ExpenseListViewController: UIViewController {
 
     private func applyFilters() {
         var result = allExpenses
+
+        // Category filter
         if activeFilter != "All" {
             result = result.filter { $0.category == activeFilter }
         }
-        if let query = searchBar.text, !query.isEmpty {
+
+        // Search filter
+        let query = searchController.searchBar.text ?? ""
+        if !query.isEmpty {
+            isSearching = true
             result = result.filter {
                 ($0.title ?? "").localizedCaseInsensitiveContains(query)
             }
+        } else {
+            isSearching = false
         }
+
         filteredExpenses = result
         emptyStateView.isHidden = !filteredExpenses.isEmpty
         tableView.isHidden = filteredExpenses.isEmpty
@@ -236,13 +250,16 @@ extension ExpenseListViewController: UITableViewDataSource, UITableViewDelegate 
     }
 }
 
-// MARK: - SearchBar
-extension ExpenseListViewController: UISearchBarDelegate {
-    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+// MARK: - Search
+extension ExpenseListViewController: UISearchResultsUpdating, UISearchBarDelegate {
+
+    func updateSearchResults(for searchController: UISearchController) {
         applyFilters()
     }
+
     func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
         searchBar.text = ""
         applyFilters()
     }
 }
+

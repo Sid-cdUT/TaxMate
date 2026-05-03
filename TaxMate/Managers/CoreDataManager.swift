@@ -40,7 +40,9 @@ final class CoreDataManager {
         }
     }
     
-    // MARK: - Create Expense
+    // MARK: - EXPENSES
+    
+    // Create Expense
     func createExpense(
         title: String,
         amount: Double,
@@ -67,7 +69,7 @@ final class CoreDataManager {
         return expense
     }
     
-    // MARK: - Fetch Expenses
+    // Fetch Expenses
     func fetchExpenses(userID: String) -> [Expense] {
         let request: NSFetchRequest<Expense> = Expense.fetchRequest()
         request.predicate = NSPredicate(format: "userID == %@", userID)
@@ -80,29 +82,35 @@ final class CoreDataManager {
         }
     }
     
-    // MARK: - Fetch Deductible Expenses
+    // Fetch Deductible Expenses
     func fetchDeductibleExpenses(userID: String, year: Int? = nil) -> [Expense] {
         let request: NSFetchRequest<Expense> = Expense.fetchRequest()
         var predicates: [NSPredicate] = [
             NSPredicate(format: "userID == %@", userID),
             NSPredicate(format: "isTaxDeductible == YES")
         ]
+        
         if let year = year {
             let cal = Calendar.current
+            
             var start = DateComponents()
             start.year = year
             start.month = 1
             start.day = 1
+            
             var end = DateComponents()
             end.year = year
             end.month = 12
             end.day = 31
+            
             if let s = cal.date(from: start), let e = cal.date(from: end) {
                 predicates.append(NSPredicate(format: "date >= %@ AND date <= %@", s as NSDate, e as NSDate))
             }
         }
+        
         request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
         request.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
+        
         do {
             return try viewContext.fetch(request)
         } catch {
@@ -110,7 +118,7 @@ final class CoreDataManager {
         }
     }
     
-    // MARK: - Update Expense
+    // Update Expense
     func updateExpense(
         _ expense: Expense,
         title: String,
@@ -128,39 +136,46 @@ final class CoreDataManager {
         expense.date = date
         expense.isTaxDeductible = isTaxDeductible
         expense.irsScheduleCategory = irsScheduleCategory
+        
         if let data = receiptImageData {
             expense.receiptImageData = data
         }
+        
         expense.notes = notes
         saveContext()
     }
     
-    // MARK: - Delete Expense
+    // Delete Expense
     func deleteExpense(_ expense: Expense) {
         viewContext.delete(expense)
         saveContext()
     }
     
-    // MARK: - Total Amount
+    // Total Amount
     func totalAmount(for expenses: [Expense]) -> Double {
         expenses.reduce(0) { $0 + $1.amount }
     }
     
-    // MARK: - Amount By Category
+    // Amount By Category
     func amountByCategory(expenses: [Expense]) -> [(category: String, total: Double)] {
         var dict: [String: Double] = [:]
+        
         for expense in expenses {
             let cat = expense.category ?? "Other"
             dict[cat, default: 0] += expense.amount
         }
-        return dict.map { ($0.key, $0.value) }.sorted { $0.total > $1.total }
+        
+        return dict
+            .map { ($0.key, $0.value) }
+            .sorted { $0.total > $1.total }
     }
     
-    // MARK: - Monthly Totals
+    // Monthly Totals
     func monthlyTotals(userID: String, months: Int = 7) -> [(month: String, total: Double)] {
         var results: [(String, Double)] = []
         let cal = Calendar.current
         let now = Date()
+        
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM"
         
@@ -175,10 +190,14 @@ final class CoreDataManager {
                 NSPredicate(format: "userID == %@", userID),
                 NSPredicate(format: "date >= %@ AND date < %@", monthStart as NSDate, monthEnd as NSDate)
             ])
+            
             let expenses = (try? viewContext.fetch(request)) ?? []
             let total = expenses.reduce(0) { $0 + $1.amount }
+            
             results.append((formatter.string(from: start), total))
         }
+        
         return results
     }
 }
+

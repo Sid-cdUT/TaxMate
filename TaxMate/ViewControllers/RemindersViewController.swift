@@ -10,24 +10,36 @@ import UserNotifications
 
 final class RemindersViewController: UIViewController {
 
-    // MARK: - Data
+    // MARK: - Data Models
+
     struct ReminderItem {
         let id: String
         let title: String
         let subtitle: String
     }
 
+    struct CustomReminder: Codable {
+        let id: String
+        let title: String
+        let date: Date
+    }
+
+    // MARK: - Stored Data
+
     private let activeReminders: [ReminderItem] = [
         ReminderItem(id: "dailyExpenseLog", title: "Daily Expense Log", subtitle: "Every day at 9:00 AM"),
         ReminderItem(id: "weeklySummary", title: "Weekly Summary", subtitle: "Every Sunday at 7:00 PM"),
         ReminderItem(id: "q1Tax", title: "Quarterly Tax Payments", subtitle: "Apr 15 · Jun 15 · Sep 15 · Jan 15"),
-        ReminderItem(id: "taxFilingDeadline", title: "Tax Filing Deadline", subtitle: "April 15 — IRS deadline"),
+        ReminderItem(id: "taxFilingDeadline", title: "Tax Filing Deadline", subtitle: "April 15 — IRS deadline")
     ]
 
     private var pendingNotificationIDs: Set<String> = []
-    private var customReminders: [(id: String, title: String, date: Date)] = []
+    private var customReminders: [CustomReminder] = []
+
+    private let remindersKey = "customReminders"
 
     // MARK: - UI
+
     private let tableView: UITableView = {
         let tv = UITableView(frame: .zero, style: .insetGrouped)
         tv.register(UITableViewCell.self, forCellReuseIdentifier: "cell")
@@ -36,6 +48,7 @@ final class RemindersViewController: UIViewController {
     }()
 
     // MARK: - Lifecycle
+
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Reminders"
@@ -48,21 +61,89 @@ final class RemindersViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         loadPendingNotifications()
+        loadCustomRemindersFromStorage()
+        tableView.reloadData()
     }
 
+    // MARK: - UserDefaults Storage
+
+    private func saveCustomReminders() {
+        if let data = try? JSONEncoder().encode(customReminders) {
+            UserDefaults.standard.set(data, forKey: remindersKey)
+        }
+    }
+
+    private func loadCustomRemindersFromStorage() {
+        if let data = UserDefaults.standard.data(forKey: remindersKey),
+           let saved = try? JSONDecoder().decode([CustomReminder].self, from: data) {
+            customReminders = saved
+        } else {
+            customReminders = []
+        }
+    }
+
+    // MARK: - Clear Expired Reminders
+
+    private func clearExpiredReminders() {
+        let now = Date()
+        
+        // Find expired reminders first
+        let expired = customReminders.filter { $0.date < now }
+        let before = customReminders.count
+
+        // Remove them from the in-memory list
+        customReminders.removeAll { $0.date < now }
+        saveCustomReminders()
+
+        // Cancel their notifications
+        for reminder in expired {
+            NotificationManager.shared.removeCustomReminder(id: reminder.id)
+        }
+
+        let removed = before - customReminders.count
+
+        let alert = UIAlertController(
+            title: "Expired Reminders Cleared",
+            message: removed == 0
+                ? "No expired reminders to remove."
+                : "\(removed) expired reminder(s) removed.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
+
+        // Refresh pending IDs and UI
+        loadPendingNotifications()
+        tableView.reloadData()
+    }
+
+
     // MARK: - Nav Bar
+
     private func setupNavigationBar() {
         let addButton = UIBarButtonItem(
-            title: "Add",
-            style: .plain,
+            barButtonSystemItem: .add,
             target: self,
             action: #selector(handleAdd)
         )
         addButton.tintColor = AppColors.primary
-        navigationItem.rightBarButtonItem = addButton
+
+        let clearButton = UIBarButtonItem(
+            barButtonSystemItem: .trash,
+            target: self,
+            action: #selector(handleClearExpired)
+        )
+        clearButton.tintColor = .systemRed
+
+        navigationItem.rightBarButtonItems = [addButton, clearButton]
+    }
+
+    @objc private func handleClearExpired() {
+        clearExpiredReminders()
     }
 
     // MARK: - Layout
+
     private func setupLayout() {
         view.addSubview(tableView)
         tableView.delegate = self
@@ -76,7 +157,8 @@ final class RemindersViewController: UIViewController {
         ])
     }
 
-    // MARK: - Load Pending
+    // MARK: - Load Pending Notifications
+
     private func loadPendingNotifications() {
         NotificationManager.shared.fetchPendingNotifications { [weak self] requests in
             self?.pendingNotificationIDs = Set(requests.map { $0.identifier })
@@ -85,6 +167,7 @@ final class RemindersViewController: UIViewController {
     }
 
     // MARK: - Add Custom Reminder
+
     @objc private func handleAdd() {
         let alert = UIAlertController(
             title: "Add Reminder",
@@ -110,6 +193,7 @@ final class RemindersViewController: UIViewController {
             datePicker.bottomAnchor.constraint(equalTo: container.bottomAnchor),
             datePicker.heightAnchor.constraint(equalToConstant: 150),
         ])
+
         alert.view.addSubview(container)
         container.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
@@ -121,30 +205,51 @@ final class RemindersViewController: UIViewController {
         ])
 
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
         alert.addAction(UIAlertAction(title: "Add", style: .default) { [weak self, weak alert] _ in
-            guard let name = alert?.textFields?.first?.text, !name.isEmpty else { return }
+            guard let name = alert?.textFields?.first?.text,
+                  !name.trimmingCharacters(in: .whitespaces).isEmpty else {
+
+                let error = UIAlertController(
+                    title: "Title Required",
+                    message: "Please enter a name for your reminder.",
+                    preferredStyle: .alert
+                )
+                error.addAction(UIAlertAction(title: "OK", style: .default))
+                self?.present(error, animated: true)
+                return
+            }
+
             let id = "custom_\(UUID().uuidString)"
+            let date = datePicker.date
+
             NotificationManager.shared.scheduleCustomReminder(
                 id: id,
                 title: "TaxMate Reminder",
                 body: name,
-                date: datePicker.date
+                date: date
             )
-            self?.customReminders.append((id: id, title: name, date: datePicker.date))
-            self?.loadPendingNotifications()
+
+            let newReminder = CustomReminder(id: id, title: name, date: date)
+            self?.customReminders.append(newReminder)
+            self?.saveCustomReminders()
+
+            self?.tableView.reloadData()
 
             let confirm = UIAlertController(
                 title: "✅ Reminder Set!",
-                message: "\"\(name)\" scheduled for \(datePicker.date.formatted(date: .abbreviated, time: .shortened))",
+                message: "\"\(name)\" scheduled for \(date.formatted(date: .abbreviated, time: .shortened))",
                 preferredStyle: .alert
             )
             confirm.addAction(UIAlertAction(title: "OK", style: .default))
             self?.present(confirm, animated: true)
         })
+
         present(alert, animated: true)
     }
 
     // MARK: - Toggle Reminder
+
     private func toggleReminder(id: String, isOn: Bool) {
         NotificationManager.shared.requestAuthorization { [weak self] granted in
             guard granted else {
@@ -184,6 +289,7 @@ final class RemindersViewController: UIViewController {
                 default: break
                 }
             }
+
             self?.loadPendingNotifications()
         }
     }
@@ -191,12 +297,14 @@ final class RemindersViewController: UIViewController {
     private func scheduleTaxDeadline() {
         let cal = Calendar.current
         let year = cal.component(.year, from: Date())
+
         var components = DateComponents()
         components.year = year
         components.month = 4
         components.day = 15
         components.hour = 9
         components.minute = 0
+
         if let date = cal.date(from: components), date > Date() {
             NotificationManager.shared.scheduleCustomReminder(
                 id: "taxFilingDeadline",
@@ -209,12 +317,13 @@ final class RemindersViewController: UIViewController {
 }
 
 // MARK: - TableView
+
 extension RemindersViewController: UITableViewDataSource, UITableViewDelegate {
 
     func numberOfSections(in tableView: UITableView) -> Int { 2 }
 
     func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        section == 0 ? "ACTIVE REMINDERS" : "RECENT NOTIFICATIONS"
+        section == 0 ? "ACTIVE REMINDERS" : "CUSTOM REMINDERS"
     }
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -225,34 +334,20 @@ extension RemindersViewController: UITableViewDataSource, UITableViewDelegate {
         let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
         var config = cell.defaultContentConfiguration()
         cell.accessoryView = nil
+        cell.selectionStyle = .none
 
         if indexPath.section == 0 {
             let reminder = activeReminders[indexPath.row]
             config.text = reminder.title
-            config.textProperties.font = UIFont.systemFont(ofSize: 15, weight: .semibold)
+            config.textProperties.font = .systemFont(ofSize: 15, weight: .semibold)
             config.secondaryText = reminder.subtitle
-            config.secondaryTextProperties.font = UIFont.systemFont(ofSize: 12)
+            config.secondaryTextProperties.font = .systemFont(ofSize: 12)
             config.secondaryTextProperties.color = .secondaryLabel
 
             let toggle = UISwitch()
             toggle.onTintColor = AppColors.primary
-            toggle.tag = indexPath.row
-
-            // Check if reminder is active
-            let isActive: Bool
-            switch reminder.id {
-            case "dailyExpenseLog":
-                isActive = pendingNotificationIDs.contains("dailyExpenseLog")
-            case "weeklySummary":
-                isActive = pendingNotificationIDs.contains("weeklySummary")
-            case "q1Tax":
-                isActive = pendingNotificationIDs.contains("q1Tax")
-            case "taxFilingDeadline":
-                isActive = pendingNotificationIDs.contains("taxFilingDeadline")
-            default:
-                isActive = false
-            }
-            toggle.isOn = isActive
+            toggle.accessibilityIdentifier = reminder.id
+            toggle.isOn = pendingNotificationIDs.contains(reminder.id)
             toggle.addTarget(self, action: #selector(toggleChanged(_:)), for: .valueChanged)
             cell.accessoryView = toggle
 
@@ -264,7 +359,7 @@ extension RemindersViewController: UITableViewDataSource, UITableViewDelegate {
             } else {
                 let reminder = customReminders[indexPath.row]
                 config.text = reminder.title
-                config.textProperties.font = UIFont.systemFont(ofSize: 15)
+                config.textProperties.font = .systemFont(ofSize: 15)
 
                 let formatter = DateFormatter()
                 formatter.dateStyle = .medium
@@ -272,7 +367,6 @@ extension RemindersViewController: UITableViewDataSource, UITableViewDelegate {
                 config.secondaryText = formatter.string(from: reminder.date)
                 config.secondaryTextProperties.color = .secondaryLabel
 
-                // Blue dot for unread
                 let dot = UIView(frame: CGRect(x: 0, y: 0, width: 8, height: 8))
                 dot.backgroundColor = .systemBlue
                 dot.layer.cornerRadius = 4
@@ -284,8 +378,29 @@ extension RemindersViewController: UITableViewDataSource, UITableViewDelegate {
         return cell
     }
 
+    // MARK: - Swipe to Delete
+
+    func tableView(_ tableView: UITableView,
+                   commit editingStyle: UITableViewCell.EditingStyle,
+                   forRowAt indexPath: IndexPath) {
+
+        if indexPath.section == 1,
+           editingStyle == .delete,
+           !customReminders.isEmpty {
+
+            let reminder = customReminders[indexPath.row]
+
+            customReminders.remove(at: indexPath.row)
+            saveCustomReminders()
+            NotificationManager.shared.removeCustomReminder(id: reminder.id)
+            loadPendingNotifications()
+            tableView.reloadData()
+        }
+    }
+
     @objc private func toggleChanged(_ sender: UISwitch) {
-        let reminder = activeReminders[sender.tag]
-        toggleReminder(id: reminder.id, isOn: sender.isOn)
+        guard let id = sender.accessibilityIdentifier else { return }
+        toggleReminder(id: id, isOn: sender.isOn)
     }
 }
+

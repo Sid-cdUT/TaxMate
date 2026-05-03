@@ -80,6 +80,12 @@ final class ProfileViewController: UIViewController {
         setupLayout()
         setupTableView()
         loadUserData()
+        // Load saved profile photo
+        if let data = UserDefaults.standard.data(forKey: "profilePhotoData"),
+           let image = UIImage(data: data) {
+            profileImageView.image = image
+            profileImageView.tintColor = .clear
+        }
     }
 
     // MARK: - Layout
@@ -360,6 +366,11 @@ extension ProfileViewController: UIImagePickerControllerDelegate, UINavigationCo
         if let edited = info[.editedImage] as? UIImage {
             profileImageView.image = edited
             profileImageView.tintColor = .clear
+            
+            // Save to UserDefaults as Data
+            if let data = edited.jpegData(compressionQuality: 0.7) {
+                UserDefaults.standard.set(data, forKey: "profilePhotoData")
+            }
         }
     }
 }

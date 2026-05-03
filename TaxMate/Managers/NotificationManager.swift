@@ -14,10 +14,14 @@ final class NotificationManager {
     private init() {}
     
     // MARK: - Request Permission
-    func requestAuthorization(completion: @escaping (Bool) -> Void) {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, _ in
-            DispatchQueue.main.async { completion(granted) }
-        }
+    func requestAuthorization(completion: ((Bool) -> Void)? = nil) {
+            UNUserNotificationCenter.current().requestAuthorization(
+                options: [.alert, .sound, .badge]
+            ) { granted, error in
+                DispatchQueue.main.async {
+                    completion?(granted)
+                }
+            }
     }
     
     // MARK: - Daily Reminder
@@ -28,10 +32,8 @@ final class NotificationManager {
         content.body = "Don't forget to log today's business expenses!"
         content.sound = .default
         
-        var components = DateComponents()
-        components.hour = 9
-        components.minute = 0
-        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+        // TEST: fires in 60 seconds
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 60, repeats: false)
         let request = UNNotificationRequest(identifier: "dailyExpenseLog", content: content, trigger: trigger)
         UNUserNotificationCenter.current().add(request)
     }
@@ -66,9 +68,11 @@ final class NotificationManager {
             components.hour = 9
             components.minute = 0
             
-            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
-            let request = UNNotificationRequest(identifier: q.id, content: content, trigger: trigger)
+            // TEST: fires in 60 seconds
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 60, repeats: false)
+            let request = UNNotificationRequest(identifier: "dailyExpenseLog", content: content, trigger: trigger)
             UNUserNotificationCenter.current().add(request)
+
         }
     }
     
