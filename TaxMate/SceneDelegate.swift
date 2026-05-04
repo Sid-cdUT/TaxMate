@@ -24,7 +24,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = (scene as? UIWindowScene) else { return }
 
         window = UIWindow(windowScene: windowScene)
-
+        window?.overrideUserInterfaceStyle =
+            UserDefaults.standard.bool(forKey: "darkModeEnabled") ? .dark : .light
+        
         // Route based on auth state
         if Auth.auth().currentUser != nil {
             window?.rootViewController = makeMainTabBar()

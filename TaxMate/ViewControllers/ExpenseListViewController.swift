@@ -79,7 +79,22 @@ final class ExpenseListViewController: UIViewController {
         setupSearchController()
         setupLayout()
         setupActions()
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(refreshExpenses),
+            name: Notification.Name("expenseUpdated"),
+            object: nil
+        )
     }
+    
+    
+
+    @objc private func refreshExpenses() {
+        loadExpenses()
+        tableView.reloadData()
+    }
+
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)

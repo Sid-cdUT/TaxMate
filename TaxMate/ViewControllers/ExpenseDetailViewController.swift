@@ -94,6 +94,13 @@ final class ExpenseDetailViewController: UIViewController {
         setupNavigationBar()
         setupLayout()
         populateData()
+        
+        NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(refreshAfterEdit),
+                name: Notification.Name("expenseUpdated"),
+                object: nil
+            )
     }
 
     private func setupNavigationBar() {
@@ -103,6 +110,10 @@ final class ExpenseDetailViewController: UIViewController {
         )
         editButton.tintColor = AppColors.primary
         navigationItem.rightBarButtonItem = editButton
+    }
+    
+    @objc private func refreshAfterEdit() {
+        populateData()
     }
 
     // MARK: - Layout

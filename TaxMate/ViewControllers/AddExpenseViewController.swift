@@ -347,6 +347,7 @@ final class AddExpenseViewController: UIViewController {
                 userID: userID
             )
         }
+        NotificationCenter.default.post(name: Notification.Name("expenseUpdated"), object: nil)
         dismiss(animated: true)
     }
 
